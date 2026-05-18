@@ -1,0 +1,25 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+
+# Secrets
+appsettings.*.json  # if contains secrets (keep appsettings.json but exclude appsettings.Production.json with real keys)
+*.env
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+
+# Other
+TestResults/
