@@ -65,6 +65,43 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/a
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
+## Azure deployment
+
+This app is ready to deploy to Azure as a single-page React application.
+
+### Build-time API configuration
+
+The app reads its API base URL from `REACT_APP_API_BASE_URL`. Set it before building for Azure:
+
+```bash
+REACT_APP_API_BASE_URL=https://your-api-host/api npm run build
+```
+
+For local development, the app falls back to `http://localhost:7093/api`.
+
+### Azure App Service
+
+Deploy the app as a static React build to a Windows Azure App Service.
+The included `public/web.config` file rewrites all client-side routes back to `index.html`, so refreshes on routes like `/studentsList` keep working under IIS.
+
+A GitHub Actions workflow is included at `.github/workflows/azure-webapp.yml` for push-to-deploy publishing.
+
+1. Create an Azure App Service running on **Windows**.
+2. In the Azure portal, open the App Service and download its **publish profile**.
+3. In GitHub, add these repository secrets:
+- `AZURE_WEBAPP_NAME`
+- `AZURE_WEBAPP_PUBLISH_PROFILE`
+- `REACT_APP_API_BASE_URL`
+4. Push to `main`, or run the workflow manually from the **Actions** tab.
+5. After deployment completes, open `https://<your-app-name>.azurewebsites.net`.
+
+The workflow fails early if any of the required secrets are missing, so configuration issues show up before the deploy step runs.
+
+### Azure Static Web Apps
+
+The included `public/staticwebapp.config.json` enables SPA route fallback for Azure Static Web Apps.
+Set `REACT_APP_API_BASE_URL` in the Azure Static Web Apps app settings if your API is hosted separately.
+
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)

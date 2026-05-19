@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StudentApi.Application.Interfaces;
 using StudentApi.Domain.Entities;
+using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace StudentApi.WebApi.Controllers
 {
@@ -9,14 +11,27 @@ namespace StudentApi.WebApi.Controllers
     public class StudentsController : ControllerBase
     {
         private readonly IStudentRepository _repository;
-        public StudentsController(IStudentRepository repository) => _repository = repository;
+        private readonly ILogger _logger;  // Serilog logger
+        public StudentsController(IStudentRepository repository, ILogger logger)
+        {
+            _repository = repository;
+            _logger = logger;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var student = await _repository.GetAllAsync();
-
-            return (student == null) ? NotFound() : Ok(student);
+            try
+            {
+                var student = await _repository.GetAllAsync();
+                _logger.Information("Students: " + student.Count());
+                return (student == null) ? NotFound() : Ok(student);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error fetching student List");
+                return StatusCode(500, "Internal server error" + ex.Message + ex.InnerException);
+            }
         }
 
         [HttpGet("{id}")]

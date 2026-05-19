@@ -2,10 +2,6 @@ import react,{useState, useEffect} from "react";
 import api from "../api/axios";
 import { useNavigate, useParams } from 'react-router-dom';
 
-//import StudentList from '../components/StudentList';
-//export default function StudentsPage() { return <StudentList />; }
-
-
 export default function StudentForm({existingStudent, onSuccess}) {
     const [student, setStudent] = useState(existingStudent || {name: '', age: '', emailID : '', stream: '' });
      const navigate = useNavigate(); // ✅ hook for navigation
@@ -29,30 +25,6 @@ export default function StudentForm({existingStudent, onSuccess}) {
   const handleChange = (e) => {
     setStudent({ ...student, [e.target.name]: e.target.value });
   };
-
-// const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//         if (student.id) {
-//             await api.put(`/students/${student.id}`, student);
-        
-//         } else {
-//             await api.post('/students', student);
-//         }
-//         if(onSuccess){
-//             console.log("Calling onSuccess callback");
-//             onSuccess(); // ✅ Call the callback to refresh the list
-//         } else {
-//              console.log("No onSuccess callback provided");
-//         }   
-//             // ✅ Redirect to Student List page after success
-//             navigate('/studentsList');
-        
-//     } catch (error) {
-//          console.error("Error saving student:", error);
-//       alert("Failed to save student");
-//     }
-// };
 
  const handleSubmit = async (e) => {
     e.preventDefault();

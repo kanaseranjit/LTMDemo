@@ -15,8 +15,8 @@ namespace StudentApi.Domain.Entities
         public int Age { get; set; }        
         public string Email { get; set; } = string.Empty;
         public bool IsDeleted { get; set; } = false; // Soft delete flag
-
-        //public int StreamId { get; set; }
+        public int StreamId { get; set; }
+        
         //public Stream Stream { get; set; } = null!;
         //public Admission Admission { get; set; } = null!;
     }
