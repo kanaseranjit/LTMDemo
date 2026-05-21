@@ -67,35 +67,227 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 
 ## Azure deployment
 
-This app is ready to deploy to Azure as a single-page React application.
+This application can be deployed to Azure App Service in two ways:
+
+1. GitHub Actions workflow (CI/CD)
+2. Manual ZipDeploy script (PowerShell)
+
+Use the manual script below when you want a predictable, one-command deployment from a local machine.
+
+### Prerequisites
+
+1. Node.js and npm installed.
+2. Azure App Service (Windows) created for the frontend.
+3. Publish profile downloaded for that App Service.
+4. API CORS configured to allow the frontend domain.
+5. PowerShell 5.1+.
 
 ### Build-time API configuration
 
-The app reads its API base URL from `REACT_APP_API_BASE_URL`. Set it before building for Azure:
+The app reads API base URL from `REACT_APP_API_BASE_URL`.
 
-```bash
-REACT_APP_API_BASE_URL=https://your-api-host/api npm run build
+Example:
+
+```powershell
+$env:REACT_APP_API_BASE_URL = "https://your-api-app.azurewebsites.net/"
+npm run build
 ```
 
-For local development, the app falls back to `http://localhost:7093/api`.
+For local development, the API client falls back to `https://studentsappservice-b2egatcuh7hkgpfx.southindia-01.azurewebsites.net/api`.
 
-### Azure App Service
+### Step-by-step manual deployment to Azure (ZipDeploy)
 
-Deploy the app as a static React build to a Windows Azure App Service.
-The included `public/web.config` file rewrites all client-side routes back to `index.html`, so refreshes on routes like `/studentsList` keep working under IIS.
+1. Open PowerShell.
+2. Go to project root.
+3. Set API URL as build-time environment variable.
+4. Build the app.
+5. Create deployment runtime folder from `build` output.
+6. Add `server.js` to serve static files and handle SPA route fallback.
+7. Add runtime `package.json` with `start` script.
+8. Zip runtime folder.
+9. Read publish credentials from publish profile.
+10. Push zip to Kudu ZipDeploy endpoint.
+11. Verify root and SPA route responses.
 
-A GitHub Actions workflow is included at `.github/workflows/azure-webapp.yml` for push-to-deploy publishing.
+### Deployment script (PowerShell)
 
-1. Create an Azure App Service running on **Windows**.
-2. In the Azure portal, open the App Service and download its **publish profile**.
-3. In GitHub, add these repository secrets:
-- `AZURE_WEBAPP_NAME`
-- `AZURE_WEBAPP_PUBLISH_PROFILE`
-- `REACT_APP_API_BASE_URL`
-4. Push to `main`, or run the workflow manually from the **Actions** tab.
-5. After deployment completes, open `https://<your-app-name>.azurewebsites.net`.
+> Update values for your environment before running:
+> - `$projectRoot`
+> - `$apiBaseUrl`
+> - `$publishProfilePath`
+> - `$siteUrl`
 
-The workflow fails early if any of the required secrets are missing, so configuration issues show up before the deploy step runs.
+You can also run the ready-to-use script in project root:
+
+```powershell
+./deploy.ps1
+```
+
+Custom parameters example:
+
+```powershell
+./deploy.ps1 -ProjectRoot "E:\Ranjit\LTI\student-management" -ApiBaseUrl "https://your-api.azurewebsites.net/" -PublishProfilePath "$HOME\Downloads\ReactStudentApp.PublishSettings" -SiteUrl "https://your-frontend.azurewebsites.net/"
+```
+
+```powershell
+$projectRoot = "E:\Ranjit\LTI\student-management"
+$apiBaseUrl = "https://studentsappservice-b2egatcuh7hkgpfx.southindia-01.azurewebsites.net/"
+$publishProfilePath = "$HOME\Downloads\ReactStudentApp.PublishSettings"
+$siteUrl = "https://reactstudentapp-c6dah9bwhthnbgfg.austriaeast-01.azurewebsites.net/"
+
+Set-Location $projectRoot
+$ErrorActionPreference = 'Stop'
+
+# 1) Build with Azure API URL
+$env:REACT_APP_API_BASE_URL = $apiBaseUrl
+npm run build
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# 2) Prepare deploy runtime
+$deployDir = Join-Path (Get-Location) "deploy-runtime"
+if (Test-Path $deployDir) { Remove-Item $deployDir -Recurse -Force }
+New-Item -ItemType Directory -Path $deployDir | Out-Null
+Copy-Item -Path "build\*" -Destination $deployDir -Recurse -Force
+
+# 3) Node static server with SPA fallback
+@'
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const port = process.env.PORT || 8080;
+const root = __dirname;
+
+const mimeTypes = {
+	'.html': 'text/html; charset=utf-8',
+	'.js': 'application/javascript; charset=utf-8',
+	'.css': 'text/css; charset=utf-8',
+	'.json': 'application/json; charset=utf-8',
+	'.png': 'image/png',
+	'.jpg': 'image/jpeg',
+	'.jpeg': 'image/jpeg',
+	'.gif': 'image/gif',
+	'.svg': 'image/svg+xml',
+	'.ico': 'image/x-icon',
+	'.txt': 'text/plain; charset=utf-8',
+	'.map': 'application/json; charset=utf-8'
+};
+
+function serveFile(filePath, res) {
+	fs.readFile(filePath, (err, data) => {
+		if (err) {
+			res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+			res.end('Not Found');
+			return;
+		}
+
+		const ext = path.extname(filePath).toLowerCase();
+		const contentType = mimeTypes[ext] || 'application/octet-stream';
+		res.writeHead(200, { 'Content-Type': contentType });
+		res.end(data);
+	});
+}
+
+const server = http.createServer((req, res) => {
+	const requestPath = decodeURIComponent((req.url || '/').split('?')[0]);
+	const normalized = path.normalize(requestPath).replace(/^\/+/, '');
+	let filePath = path.join(root, normalized);
+
+	if (!filePath.startsWith(root)) {
+		res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+		res.end('Forbidden');
+		return;
+	}
+
+	fs.stat(filePath, (err, stats) => {
+		if (!err && stats.isDirectory()) {
+			filePath = path.join(filePath, 'index.html');
+			return serveFile(filePath, res);
+		}
+
+		if (!err && stats.isFile()) {
+			return serveFile(filePath, res);
+		}
+
+		serveFile(path.join(root, 'index.html'), res);
+	});
+});
+
+server.listen(port, () => {
+	console.log(`Server listening on port ${port}`);
+});
+'@ | Set-Content -Path (Join-Path $deployDir "server.js") -Encoding UTF8
+
+# 4) Runtime package.json
+@'
+{
+	"name": "reactstudentapp-runtime",
+	"version": "1.0.0",
+	"private": true,
+	"main": "server.js",
+	"scripts": {
+		"start": "node server.js"
+	}
+}
+'@ | Set-Content -Path (Join-Path $deployDir "package.json") -Encoding UTF8
+
+# 5) Zip runtime
+$zipPath = Join-Path (Get-Location) "deploy-runtime.zip"
+if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+tar -a -c -f $zipPath -C $deployDir .
+
+# 6) Read publish profile and deploy
+[xml]$xml = Get-Content -Path $publishProfilePath
+$zipProfile = $xml.publishData.publishProfile |
+	Where-Object { $_.publishMethod -eq 'ZipDeploy' } |
+	Select-Object -First 1
+
+$scmHost = $zipProfile.publishUrl.Replace(':443', '')
+$pair = "{0}:{1}" -f $zipProfile.userName, $zipProfile.userPWD
+$auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($pair))
+$headers = @{ Authorization = "Basic $auth" }
+
+$resp = Invoke-WebRequest -Uri ("https://" + $scmHost + "/api/zipdeploy") -Method POST -InFile $zipPath -ContentType "application/zip" -Headers $headers -UseBasicParsing
+Write-Output ("ZipDeploy status=" + $resp.StatusCode)
+
+# 7) Verify deployment
+$root = Invoke-WebRequest -Uri $siteUrl -UseBasicParsing
+Write-Output ("RootStatus=" + $root.StatusCode)
+
+$studentsRoute = Invoke-WebRequest -Uri ($siteUrl.TrimEnd('/') + "/studentsList") -UseBasicParsing
+Write-Output ("StudentsListStatus=" + $studentsRoute.StatusCode)
+```
+
+### Deployment using GitHub Actions (optional)
+
+A workflow is available in `.github/workflows/azure-webapp.yml`.
+
+Add these GitHub repository secrets:
+
+1. `AZURE_WEBAPP_NAME`
+2. `AZURE_WEBAPP_PUBLISH_PROFILE`
+3. `REACT_APP_API_BASE_URL`
+
+Then push to `main` or run the workflow manually from the Actions tab.
+
+### Validation checklist after deployment
+
+1. Open app root URL and verify status 200.
+2. Open SPA routes like `/studentsList` and `/admission`.
+3. Confirm API calls succeed in browser network tab.
+4. If API is cross-origin, verify API CORS allows frontend domain.
+
+### Troubleshooting
+
+1. `401 Unauthorized` on API calls:
+	 - Confirm login endpoint `/api/auth/login` is reachable.
+	 - Confirm JWT response includes token fields expected by client.
+2. CORS errors:
+	 - Add frontend URL under API App Service CORS settings.
+3. Root shows Azure placeholder page:
+	 - Re-run ZipDeploy and verify status 200.
+4. Route refresh returns 404:
+	 - Ensure SPA fallback is present (web.config or server.js fallback logic).
 
 ### Azure Static Web Apps
 

@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using StudentApi.Application.Interfaces;
 using StudentApi.Domain.Entities;
-using Serilog;
 using ILogger = Serilog.ILogger;
 
 namespace StudentApi.WebApi.Controllers
@@ -18,6 +19,7 @@ namespace StudentApi.WebApi.Controllers
             _logger = logger;
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
