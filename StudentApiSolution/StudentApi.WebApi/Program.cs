@@ -7,6 +7,7 @@ using StudentApi.Application.Interfaces;
 using StudentApi.Infrastructure.Data;
 using StudentApi.Infrastructure.Repositories;
 using StudentApi.WebApi.Controllers;
+using StudentApi.WebApi.Middleware;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,6 +64,8 @@ builder.Services.AddCors(options =>
 });
 
 
+builder.Services.AddApplicationInsightsTelemetry();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -72,6 +75,9 @@ var app = builder.Build();
 
 // Enable CORS BEFORE controllers
 app.UseCors("AllowReactApp");
+
+app.UseMiddleware<RequestResponseTelemetryMiddleware>();
+app.UseMiddleware<PollyCircuitBreakerMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI();
