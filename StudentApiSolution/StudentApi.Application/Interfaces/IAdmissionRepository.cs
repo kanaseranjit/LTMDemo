@@ -10,7 +10,7 @@ namespace StudentApi.Application.Interfaces
 {
     public interface IAdmissionRepository
     {
-        Task<Admission?> GetByStudentIdAsync(int studentId);
+        Task<List<Admission>> GetByStudentIdAsync(int studentId);
         Task ConfirmAdmissionAsync(Admission admission);
     }
 }

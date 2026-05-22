@@ -27,10 +27,12 @@ namespace StudentApi.Infrastructure.Repositories
         }
 
 
-        public async Task<Admission?> GetByStudentIdAsync(int studentId)
+        public async Task<List<Admission>> GetByStudentIdAsync(int studentId)
         {
-            Admission admissions= _context.Admissions.Where(x=>x.StudentId= studentId);
-            return admissions;
+            var studAdmissions = await _context.Admissions
+                                   .Where(x => x.StudentId == studentId)
+                                   .ToListAsync();
+            return studAdmissions;
         }
     }
 }
