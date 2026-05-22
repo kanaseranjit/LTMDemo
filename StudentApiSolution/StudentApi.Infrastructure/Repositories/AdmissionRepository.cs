@@ -29,7 +29,7 @@ namespace StudentApi.Infrastructure.Repositories
 
         public async Task<Admission?> GetByStudentIdAsync(int studentId)
         {
-            Admission admissions= _context.Admissions.FirstOrDefault(x=>x.StudentId==studentId);
+            Admission admissions= _context.Admissions.Where(x=>x.StudentId= studentId);
             return admissions;
         }
     }

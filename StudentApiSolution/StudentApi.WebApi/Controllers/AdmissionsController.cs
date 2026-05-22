@@ -30,5 +30,12 @@ namespace StudentApi.WebApi.Controllers
             return Ok();
         }
 
+        [HttpGet("bystudent/{id}")]
+        public async Task<IActionResult> GetByStudent(int id)
+        {
+            var admissions = await _repository.GetByStudentIdAsync(id);
+            return (admissions == null || !admissions.Any()) ? NotFound() : Ok(admissions);
+        }
+
     }
 }
