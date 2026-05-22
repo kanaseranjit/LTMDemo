@@ -1,12 +1,10 @@
-import react,{useState,useEffect} from "react";
-import {Link, useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from 'react-router-dom';
 import api from "../api/axios";
- import StudentForm from "./StudentForm";
 
 export default function StudentList() {
     const [students, setStudents] = useState([]);
     const [errorMessage, setErrorMessage] = useState('');
-    const [editingStudent, setEditingStudent] = useState(null);
 const navigate = useNavigate(); // ✅ hook for navigation
     const fetchStudents = async () => {
         try {
@@ -27,15 +25,6 @@ const navigate = useNavigate(); // ✅ hook for navigation
     useEffect(() => {
         fetchStudents();
     }, []);
-
-    const handleStudentSaved = () => {
-        fetchStudents();
-        setEditingStudent(null);
-    };
-
-    const handleEditStudent = (student) => {
-        setEditingStudent(student);
-    };
 
     const handleDelete = async (id) => {
         try {
